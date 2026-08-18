@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demo 的知识库导航</title>
+
+<!-- 仅引入标题用的衬线字体，正文使用系统字体，保证加载失败时也不影响可读性 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+
+<style>
+  /* ============================================================
+     一、设计令牌（Design Tokens）
+     修改这里的变量即可整体调整配色与字体，无需改动下方结构代码
+     配色参考 Claude 文档站的暖米色 + 赤陶色调
+     ============================================================ */
+  :root {
+    /* 背景色 */
+    --color-bg: #FAF8F4;
+    --color-bg-soft: #F3EEE5;
+    --color-surface: #FFFFFF;
+
+    /* 文字色 */
+    --color-text: #26211A;
+    --color-text-secondary: #6F6659;
+    --color-text-faint: #A69C8B;
+
+    /* 边框与分隔线 */
+    --color-border: #E7E0D2;
+    --color-border-soft: #EFE9DC;
+
+    /* 强调色（赤陶 / Claude 交互色） */
+    --color-accent: #D97757;
+    --color-accent-dark: #BC5C3E;
+    --color-accent-soft: #F4E3D8;
+
+    /* 书脊分类色 —— 每个分类对应一种颜色，新增分类时可在此追加 */
+    --spine-机器学习: #D97757;
+    --spine-计算机视觉: #6B8F71;
+    --spine-科研笔记: #5B7FA6;
+    --spine-工具与杂项: #A68A5B;
+    --spine-default: #9C8F7A;
+
+    /* 字体 */
+    --font-display: 'Fraunces', Georgia, 'Songti SC', 'STSong', serif;
+    --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+                 'Microsoft YaHei', Helvetica, Arial, sans-serif;
+
+    /* 圆角与阴影 */
+    --radius-card: 14px;
+    --radius-pill: 999px;
+    --shadow-card: 0 1px 2px rgba(38, 33, 26, 0.04), 0 1px 1px rgba(38, 33, 26, 0.02);
+    --shadow-card-hover: 0 12px 24px -8px rgba(38, 33, 26, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* 减少动效偏好：尊重系统设置 */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  a { color: inherit; text-decoration: none; }
+
+  .wrap {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ============================================================
+     二、顶部 Hero 区域
+     ============================================================ */
+  .hero {
+    padding: 88px 0 56px;
+    position: relative;
+  }
+
+  /* 装饰性的"书脊堆叠"图形，呼应知识库/书架的主题，作为本页唯一的视觉签名元素 */
+  .hero-spines {
+    position: absolute;
+    top: 92px;
+    right: 24px;
+    display: flex;
+    gap: 5px;
+    opacity: 0.9;
+  }
+  .hero-spines span {
+    display: block;
+    width: 10px;
+    border-radius: 3px;
+  }
+  .hero-spines span:nth-child(1) { height: 58px; background: var(--spine-机器学习); }
+  .hero-spines span:nth-child(2) { height: 74px; background: var(--spine-计算机视觉); }
+  .hero-spines span:nth-child(3) { height: 44px; background: var(--spine-科研笔记); }
+  .hero-spines span:nth-child(4) { height: 66px; background: var(--spine-工具与杂项); }
+
+  .eyebrow {
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+
+  .hero h1 {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 5vw, 48px);
+    font-weight: 500;
+    line-height: 1.15;
+    margin: 0 0 14px;
+    letter-spacing: -0.01em;
+  }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--color-text-secondary);
+    max-width: 520px;
+    margin: 0;
+  }
+
+  /* 搜索框 */
+  .search-box {
+    margin-top: 32px;
+    max-width: 420px;
+  }
+  .search-box input {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 14px;
+    font-family: var(--font-body);
+    color: var(--color-text);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .search-box input::placeholder { color: var(--color-text-faint); }
+  .search-box input:focus {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+
+  /* ============================================================
+     三、分类筛选按钮（根据下方数据自动生成，无需手动维护）
+     ============================================================ */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 28px 0 8px;
+  }
+  .filter-btn {
+    padding: 7px 16px;
+    font-size: 13px;
+    font-family: var(--font-body);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .filter-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent-dark);
+  }
+  .filter-btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .filter-btn.active {
+    background: var(--color-text);
+    border-color: var(--color-text);
+    color: var(--color-bg);
+  }
+
+  /* ============================================================
+     四、知识库卡片网格
+     ============================================================ */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    padding: 28px 0 100px;
+  }
+
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-soft);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+    padding: 22px 22px 20px 24px;
+    overflow: hidden;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+
+  /* 左侧"书脊"色条，颜色由分类决定，是每张卡片的视觉锚点 */
+  .card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 5px;
+    background: var(--spine-color, var(--spine-default));
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-border);
+  }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .card-icon {
+    font-size: 26px;
+    line-height: 1;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+  }
+  .status-badge.building {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-dark);
+  }
+
+  .card h3 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    margin: 14px 0 6px;
+    letter-spacing: -0.005em;
+  }
+
+  .card p {
+    font-size: 13.5px;
+    color: var(--color-text-secondary);
+    margin: 0 0 16px;
+    /* 超过 3 行省略，避免长描述撑破卡片高度 */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .tag {
+    font-size: 11px;
+    color: var(--color-text-faint);
+    background: var(--color-bg-soft);
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+  }
+
+  .card-footer {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 14px;
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .card-link {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--color-accent-dark);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .card-link .arrow { transition: transform 0.15s ease; }
+  .card:hover .card-link .arrow { transform: translateX(3px); }
+
+  .repo-link {
+    font-size: 12px;
+    color: var(--color-text-faint);
+  }
+  .repo-link:hover { color: var(--color-text-secondary); }
+
+  /* 卡片整体可点击的透明覆盖层（点击卡片任意位置跳转到知识库主链接） */
+  .card-hit {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+  }
+  /* 让仓库链接始终可单独点击，不被覆盖层遮挡 */
+  .card-footer a { position: relative; z-index: 2; }
+
+  /* 空状态 */
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-secondary);
+  }
+  .empty-state p:first-child {
+    font-family: var(--font-display);
+    font-size: 18px;
+    color: var(--color-text);
+    margin-bottom: 6px;
+  }
+
+  /* 页脚 */
+  .footer {
+    border-top: 1px solid var(--color-border-soft);
+    padding: 22px 0 40px;
+    font-size: 12.5px;
+    color: var(--color-text-faint);
+    text-align: center;
+  }
+
+  @media (max-width: 560px) {
+    .hero { padding: 56px 0 40px; }
+    .hero-spines { display: none; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="wrap">
+    <header class="hero">
+      <div class="hero-spines" aria-hidden="true">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      <p class="eyebrow">Knowledge Base Navigator</p>
+      <h1>Demo 的知识库</h1>
+      <p>汇总我正在维护的各类学习笔记与研究知识库，点击卡片即可跳转到对应站点。</p>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索知识库名称、标签或简介…" aria-label="搜索知识库">
+      </div>
+
+      <!-- 分类筛选按钮由 JS 根据下方数据自动生成 -->
+      <div class="filters" id="filters"></div>
+    </header>
+
+    <main class="grid" id="grid"></main>
+
+    <footer class="footer">
+      由 <a href="#" style="text-decoration: underline;">demo-djh</a> 维护 · 最近更新于构建时手动同步
+    </footer>
+  </div>
+
+<script>
+/* ================================================================
+   五、知识库数据（唯一需要经常维护的地方）
+   ----------------------------------------------------------------
+   新增一个知识库：复制下方任意一个对象，粘贴到数组中并修改字段即可，
+   页面会自动生成卡片、分类筛选按钮，无需改动其他代码。
+
+   字段说明：
+     id          唯一标识（英文/数字，任意不重复即可）
+     name        知识库名称
+     description 简介，建议 1~2 句话（超出 3 行会被截断）
+     url         知识库访问地址（如 GitHub Pages 站点）
+     repo        对应的 GitHub 仓库地址（可选，留空则不显示仓库链接）
+     category    分类名称，用于左侧书脊配色与顶部筛选按钮
+                 若使用新分类，记得在上方 CSS 变量区添加对应的 --spine-分类名 颜色
+     tags        标签数组，展示在卡片下方
+     icon        一个 emoji，作为卡片图标
+     status      'active'（已上线）或 'building'（建设中，会显示"建设中"角标）
+   ================================================================ */
+  const knowledgeBases = [
+    {
+      id: 'ml-kb',
+      name: '机器学习速成手册',
+      description: '基于 mkdocs-material 构建的机器学习知识库，系统整理基础理论、常用模型与实践笔记。',
+      url: 'https://demo-djh.github.io/ml-knowledge/',
+      repo: 'https://github.com/demo-djh/ml-knowledge',
+      category: '机器学习',
+      tags: ['ML', 'AI', 'mkdocs'],
+      icon: '🤖',
+      status: 'active'
+    },
+
+    // 下面是一个示例条目，展示"建设中"状态的效果 —— 正式使用前请替换为你的真实知识库，或直接删除本条目
+    {
+      id: 'cv-notes',
+      name: '建设中',
+      description: '建设中',
+      url: '#',
+      repo: '#',
+      category: '建设中',
+      tags: ['建设中'],
+      icon: '🎨',
+      status: 'building'
+    }
+  ];
+
+  /* ================================================================
+     六、渲染逻辑（一般无需修改）
+     ================================================================ */
+  const gridEl = document.getElementById('grid');
+  const filtersEl = document.getElementById('filters');
+  const searchInput = document.getElementById('searchInput');
+
+  let activeCategory = '全部';
+  let keyword = '';
+
+  // 根据分类名生成 CSS 变量名，读取对应书脊颜色；未定义分类则用默认色
+  function spineColor(category) {
+    return `var(--spine-${category}, var(--spine-default))`;
+  }
+
+  function renderFilters() {
+    const categories = ['全部', ...new Set(knowledgeBases.map(kb => kb.category))];
+    filtersEl.innerHTML = categories.map(cat => `
+      <button class="filter-btn ${cat === activeCategory ? 'active' : ''}" data-cat="${cat}">
+        ${cat}
+      </button>
+    `).join('');
+
+    filtersEl.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.dataset.cat;
+        renderFilters();
+        renderGrid();
+      });
+    });
+  }
+
+  function renderGrid() {
+    const kw = keyword.trim().toLowerCase();
+
+    const filtered = knowledgeBases.filter(kb => {
+      const matchCategory = activeCategory === '全部' || kb.category === activeCategory;
+      const haystack = [kb.name, kb.description, ...(kb.tags || [])].join(' ').toLowerCase();
+      const matchKeyword = kw === '' || haystack.includes(kw);
+      return matchCategory && matchKeyword;
+    });
+
+    if (filtered.length === 0) {
+      gridEl.innerHTML = `
+        <div class="empty-state">
+          <p>没有找到匹配的知识库</p>
+          <p>换一个关键词，或切换到"全部"分类试试</p>
+        </div>`;
+      return;
+    }
+
+    gridEl.innerHTML = filtered.map(kb => `
+      <article class="card" style="--spine-color:${spineColor(kb.category)}">
+        <a class="card-hit" href="${kb.url}" target="_blank" rel="noopener" aria-label="打开 ${kb.name}"></a>
+        <div class="card-top">
+          <span class="card-icon">${kb.icon || '📘'}</span>
+          ${kb.status === 'building' ? '<span class="status-badge building">建设中</span>' : ''}
+        </div>
+        <h3>${kb.name}</h3>
+        <p>${kb.description || ''}</p>
+        <div class="card-tags">
+          ${(kb.tags || []).map(t => `<span class="tag">${t}</span>`).join('')}
+        </div>
+        <div class="card-footer">
+          <span class="card-link">进入知识库 <span class="arrow">→</span></span>
+          ${kb.repo ? `<a class="repo-link" href="${kb.repo}" target="_blank" rel="noopener">查看仓库 ↗</a>` : ''}
+        </div>
+      </article>
+    `).join('');
+  }
+
+  searchInput.addEventListener('input', (e) => {
+    keyword = e.target.value;
+    renderGrid();
+  });
+
+  // 初始化渲染
+  renderFilters();
+  renderGrid();
+</script>
+
+</body>
+</html>
